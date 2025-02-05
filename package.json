@@ -1,0 +1,39 @@
+{
+  "name": "face-login",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host",
+    "build": "vite build",
+    "preview": "vite preview",
+    "lint": "eslint . --fix",
+    "format": "prettier --write src/"
+  },
+  "dependencies": {
+    "@mdi/font": "^7.4.47",
+    "@tensorflow-models/blazeface": "^0.1.0",
+    "@tensorflow-models/face-detection": "^1.0.3",
+    "@tensorflow-models/mobilenet": "^2.1.1",
+    "@tensorflow/tfjs": "^4.22.0",
+    "@tensorflow/tfjs-backend-webgl": "^4.22.0",
+    "@tensorflow/tfjs-converter": "^4.22.0",
+    "@tensorflow/tfjs-core": "^4.22.0",
+    "face-api.js": "^0.22.2",
+    "pinia": "^2.3.1",
+    "vue": "^3.5.13",
+    "vue-router": "^4.5.0"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.18.0",
+    "@vitejs/plugin-vue": "^5.2.1",
+    "@vue/eslint-config-prettier": "^10.1.0",
+    "eslint": "^9.18.0",
+    "eslint-plugin-vue": "^9.32.0",
+    "prettier": "^3.4.2",
+    "vite": "^6.0.11",
+    "vite-plugin-vue-devtools": "^7.7.0",
+    "vite-plugin-vuetify": "^2.0.4",
+    "vuetify": "^3.7.8"
+  }
+}
