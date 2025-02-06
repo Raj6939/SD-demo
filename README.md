@@ -105,7 +105,7 @@ Cosine similarity is a measure of the similarity between two vectors, and it’s
 
     ```math
 
-    cosine_similarity(A, B) = \frac{A \cdot B}{\|A\| \|B\|}
+    cosinesimilarity(A, B) = \frac{A \cdot B}{\|A\| \|B\|}
 
     ```
 
