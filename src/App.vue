@@ -46,11 +46,19 @@ export default {
       }
     },
 
-    handleFormSubmit(formData) {
-      this.updateData({
-        id: this.id, ...formData,
-        embedding: this.image
-      })
+    async handleFormSubmit(formData) {
+      try {
+        const resp = await this.updateData({
+          id: this.id, ...formData,
+          embedding: this.image
+        })
+        alert(resp.status.error_code)
+        this.showForm = true
+      } catch (error) {
+        alert(error.message)
+      }
+
+
 
 
 

@@ -31,9 +31,7 @@
 <script>
 
 import GlobalLoader from './LoaderComponent.vue';
-import * as tf from '@tensorflow/tfjs'
-import * as blazeFace from '@tensorflow-models/blazeface'
-import * as mobileNet from '@tensorflow-models/mobilenet'
+import config from '../config'
 
 export default {
     name: 'CameraComponent',
@@ -59,7 +57,7 @@ export default {
                     video: {
                         width: { ideal: 1280, max: 1920 },
                         height: { ideal: 720, max: 1080 },
-                        frameRate: { ideal: 30, max: 60 },
+                        frameRate: { ideal: 60, max: 60, min: 30 },
                         facingMode: "user",
                         aspectRatio: { ideal: 16 / 9 },
                         resizeMode: "crop-and-scale"
@@ -84,92 +82,41 @@ export default {
         },
 
         async captureImage() {
-            await this.sleep(1000)
-            this.progress = 60
-            const canvas = document.createElement('canvas');
-            const context = canvas.getContext('2d');
-            canvas.width = this.$refs.cameraFeed.videoWidth;
-            canvas.height = this.$refs.cameraFeed.videoHeight;
-            context.drawImage(this.$refs.cameraFeed, 0, 0, canvas.width, canvas.height);
-            // const image = canvas.toDataURL('image/jpeg');
-            // display image
-            // const imgElement = document.createElement('img');
-            // imgElement.src = image;
-            // imgElement.style.width = '200px';
-            // imgElement.style.height = '200px'
-
-            // imgElement.style.borderRadius = '50%';
-            // document.querySelector('.d-flex.justify-center').appendChild(imgElement);
-
-            const embeddingModel = await mobileNet.load();
-            const faceModel = await blazeFace.load();
-            this.progress = 95
-            console.log('MobileNet model loaded');
-
-
-            const inputTensor = tf.browser.fromPixels(canvas);
-            const predictions = await faceModel.estimateFaces(inputTensor, false)
-            console.log(predictions);
-
-
-            if (predictions.length === 0) {
-                alert('No faces detected.');
-                return this.stopCamera()
-
-            }
-
-            const embeddings = []
-            for (let i = 0; i < predictions.length; i++) {
-                const face = predictions[i];
-                let [x, y] = face.topLeft.map(Math.floor); // Top-left corner of the bounding box
-                console.log(predictions);
-
-                let [width, height] = face.bottomRight.map((v, idx) => Math.floor(v - face.topLeft[idx])); // Width and height of the bounding box
-
-
-                const padding = 10;
-                x = Math.max(0, x - padding);
-                y = Math.max(0, y - padding);
-                width = Math.min(canvas.width - x, width + 2 * padding);
-                height = Math.min(canvas.height - y, height + 2 * padding);
-
-                const faceCanvas = document.createElement('canvas');
-                const faceCtx = faceCanvas.getContext('2d');
-                faceCanvas.width = width;
-                faceCanvas.height = height;
-                faceCtx.drawImage(canvas, x, y, width, height, 0, 0, width, height);
-                console.log(faceCanvas.toDataURL('image/jpeg'));
-
-                const imgElement = document.createElement('img');
-                imgElement.src = faceCanvas.toDataURL('image/jpeg');
-                document.querySelector('.d-flex.justify-center').appendChild(imgElement);
-
-                // Create a tensor from the cropped face image, resize, and normalize
-                const faceTensor = tf.browser.fromPixels(faceCanvas)
-
-                // Generate face embedding using the embedding model
-                const embedding = await embeddingModel.infer(faceTensor, { pooling: 'avg' }).arraySync()[0];
-                console.log(embedding);
-
-                // Push the results including face embedding and bounding box
-                embeddings.push({
-                    faceIndex: i,
-                    embedding,
-                    boundingBox: { x, y, width, height },
-                    landmarks: face.landmarks, // Include facial landmarks if necessary
-                    probability: face.probability[0] // Confidence score of the face detection
+            try {
+                await this.sleep(1000)
+                this.progress = 60
+                const canvas = document.createElement('canvas');
+                const context = canvas.getContext('2d');
+                canvas.width = this.$refs.cameraFeed.videoWidth;
+                canvas.height = this.$refs.cameraFeed.videoHeight;
+                context.drawImage(this.$refs.cameraFeed, 0, 0, canvas.width, canvas.height);
+                const image = canvas.toDataURL('image/jpeg');
+                const response = await fetch(config.backendURL + '/represent', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ img: image, model_name: 'Facenet' })
                 });
 
-                console.log(embeddings);
+                if (!response.ok) {
+                    console.error('Error calling DeepFace API', response.statusText);
+                    return;
+                }
+
+                const results = await response.json();
+                const embeddings = results.results[0]
 
 
                 this.progress = 100
 
                 await this.stopCamera();
-                this.$emit('image-captured', embeddings[0].embedding);
-
-
+                this.$emit('image-captured', embeddings.embedding);
+            } catch (e) {
+                alert(e.message)
             }
+
+
         }
 
         ,

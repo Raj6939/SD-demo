@@ -1,3 +1,4 @@
+import config from '@/config';
 import { defineStore } from 'pinia';
 
 export const useImageStore = defineStore('imageStore', {
@@ -19,7 +20,7 @@ export const useImageStore = defineStore('imageStore', {
                 const embedding = this.image
                 // Simulate face detection logic
                 // Example simulated delay
-                const response = await fetch('https://192.168.0.182:3001', {
+                const response = await fetch(config.backendURL, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -41,7 +42,7 @@ export const useImageStore = defineStore('imageStore', {
         async updateData(body) {
             // call patch endpoint for updating
             try {
-                const response = await fetch('https://192.168.0.182:3001', {
+                const response = await fetch(config.backendURL, {
                     method: 'PATCH',
                     headers: {
                         'Content-Type': 'application/json',

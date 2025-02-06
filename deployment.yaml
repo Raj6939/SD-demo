@@ -1,0 +1,40 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: face-login
+  namespace: hypermine-development
+spec:
+  selector:
+    matchLabels:
+      app: face-login
+  template:
+    metadata:
+      labels:
+        app: face-login
+    spec:
+      containers:
+      - name: face-login
+        image: pratapmridha/face-login
+        imagePullPolicy: Always
+        resources:
+          limits:
+            memory: "256Mi"
+            cpu: "100m"
+        ports:
+        - containerPort: 8088
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: face-login-svc
+  namespace: hypermine-development
+  annotations:
+    cloud.google.com/neg: '{"ingress": true}'
+
+spec:
+  type: NodePort
+  selector:
+    app: face-login
+  ports:
+  - port: 8088
+    targetPort: 80
