@@ -4,5 +4,6 @@ export default {
     schemaID:'sch:hid:testnet:z6MktGM44bV2tRuVac382B9AGBdmngs1hm5kL9Sv7eGuYhqj:1.0',
     vcID:"",
     subDid:'did:hid:testnet:d55ad7a7-c88d-4f2c-b7a5-6da460371229',
-    subdomain:'https://ent-8e13fc8.api.entity.hypersign.id'
+    subdomain:'https://ent-8e13fc8.api.entity.hypersign.id',
+    websocketUrl:'wss://rajpatil-production.up.railway.app'
 }

@@ -91,7 +91,7 @@ export default {
     }
 
     // Initialize WebSocket connection
-    this.ws = new WebSocket("wss://rajpatil-production.up.railway.app");
+    this.ws = new WebSocket(config.websocketUrl);
 
     this.ws.onopen = () => {
         console.log("WebSocket connection established.");
