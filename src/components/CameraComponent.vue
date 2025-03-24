@@ -1,4 +1,7 @@
 <template>
+    <div v-if="loading" class="loader-overlay">
+    <div class="loader"></div>
+</div>
     <v-snackbar v-model="notification.show" :color="notification.color" timeout="3000" top
     absolute>
     {{ notification.message }}
@@ -72,6 +75,7 @@ export default {
     components: { GlobalLoader },
     data() {
         return {
+            loading:false,
             imageStore: useImageStore(), // ✅ Initialize the store in data
             stream: null,
             isLoading: false,
@@ -205,7 +209,8 @@ captureImage() {
             if (!this.pin) {
                 alert('Please set a PIN');
                 return;
-            }            
+            }      
+            this.loading = true      
             const payload ={
                 lastName: this.lastName,
                 phoneNumber: this.phoneNumber,
@@ -254,19 +259,24 @@ captureImage() {
 storedUsers.push(userData);
 
 // Save updated array back to localStorage
-localStorage.setItem("userPins", JSON.stringify(storedUsers));    
-    this.step = 1;    
+localStorage.setItem("userPins", JSON.stringify(storedUsers));        
+    this.showNotification("User Registration Completed", "success");    
+    setTimeout(() => {
+    this.step = 1;
+    }, 3000);
     this.pin='',
     this.lastName='',
     this.phoneNumber='',
     this.faceData=''
-    this.showNotification("User Registration Completed", "success");
   } catch (error) {
     console.error("Error issuing credential:", error);
     throw error;
-  }     
+  }  
+  finally{
+    this.loading = false
+  }   
         },
-        async verifyPin() {
+        async verifyPin() {        
     const storedUsers = JSON.parse(localStorage.getItem('userPins')) || [];
 
     if (storedUsers.length === 0) {
@@ -283,7 +293,7 @@ localStorage.setItem("userPins", JSON.stringify(storedUsers));
     }
 
     console.log("User verified:", matchedUser);
-
+    this.loading = true
     const url = `${config.subdomain}/api/v1/credential/${matchedUser.vcID}?retrieveCredential=true`;
 
     try {
@@ -318,8 +328,12 @@ localStorage.setItem("userPins", JSON.stringify(storedUsers));
         console.error("Error fetching credential:", error);
         alert("Failed to fetch credential. Please try again.");
     }
+    finally{
+        this.loading = false
+    }
 },
 shareSelected() {
+    this.loading = true
       if (this.ws && this.ws.readyState === WebSocket.OPEN) {
                 const sharedData = {};
                 this.selectedAttributes.forEach(attr => {
@@ -327,10 +341,12 @@ shareSelected() {
                 });
                 console.log(JSON.parse(this.qrData))                
                 this.ws.send(JSON.stringify({type:"shareData",payload:sharedData, clientId:JSON.parse(this.qrData).clientId}));
-                console.log("Shared data via WebSocket:", sharedData);   
-                this.showNotification("Data has been shared successfully!", "success");           
-                this.step = 1
-
+                console.log("Shared data via WebSocket:", sharedData);
+                setTimeout(() => {
+                this.loading = false 
+                }, 3000);                                                          
+                this.showNotification("Data has been shared successfully!", "success");
+                this.step=1
 
             } else {
                 console.error("WebSocket is not connected.");
@@ -367,4 +383,31 @@ shareSelected() {
     50% { box-shadow: 0 0 15px rgba(0, 255, 0, 0.8); }
     100% { box-shadow: 0 0 10px rgba(0, 255, 0, 0.5); }
 }
+.loader-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+}
+
+.loader {
+    width: 50px;
+    height: 50px;
+    border: 5px solid #fff;
+    border-top: 5px solid #3498db;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
 </style>
