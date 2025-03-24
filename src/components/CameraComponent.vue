@@ -5,7 +5,7 @@
         <v-card class="mx-auto mt-0 fill-height" style="width: 100%; height: 100vh;">
             <!-- QR Code Scanner -->
             <v-card-actions class="d-flex justify-center mt-4">
-                <v-btn color="primary" @click="scanQRCode">Scan</v-btn>
+                <v-btn color="primary" @click="scanQRCode">Scan QR</v-btn>
             </v-card-actions>
 
             <v-card-text class="d-flex justify-center" v-if="step === 1">
@@ -47,8 +47,8 @@
                         <v-checkbox v-model="selectedAttributes" :value="key" :label="`${key}: ${value}`"></v-checkbox>
                     </v-list-item>
                 </v-list>
-                <v-btn color="primary" @click="shareSelectedData">Share Selected</v-btn>
-            </v-card-text>
+                <v-btn color="primary" @click="shareSelected">Share Selected</v-btn>               
+            </v-card-text>            
         </v-card>
     </v-container>
 </template>
@@ -74,20 +74,41 @@ export default {
             lastName: '',
             phoneNumber: '',
             pin: '',
-            qrData: '',
+            qrData: {},
             enteredPin: '',           
             vcID:'',
             faceData:'',
             jsonData: null, // Holds JSON data after verification
             selectedAttributes: [], // Stores selected attributes
             dialog: false, // Controls dialog visibility
-            sharedData: {} // Holds selected data to display            
+            sharedData: {}, // Holds selected data to display  
+            ws: null                       
         };
     },
     mounted() {
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
         alert("Camera access is not supported in this browser.");
     }
+
+    // Initialize WebSocket connection
+    this.ws = new WebSocket("wss://rajpatil-production.up.railway.app");
+
+    this.ws.onopen = () => {
+        console.log("WebSocket connection established.");
+    };
+
+    this.ws.onmessage = (event) => {
+        console.log("Message received:", event.data);
+        // Handle received messages
+    };
+
+    this.ws.onclose = () => {
+        console.log("WebSocket connection closed.");
+    };
+
+    this.ws.onerror = (error) => {
+        console.error("WebSocket error:", error);
+    };    
 },
     methods: {
      
@@ -115,7 +136,8 @@ export default {
         });
         this.$refs.cameraFeed.srcObject = this.stream;
         this.qrScanner = new QrScanner(this.$refs.cameraFeed, result => {
-            this.qrData = result.data;
+            console.log(result)
+            this.qrData = result;
             this.stopCamera();
             this.step = 4;
         });
@@ -209,64 +231,92 @@ captureImage() {
                 faceData:this.faceData,
                 vcID:data.credentialDocument.id
             }
-    localStorage.setItem('userPin', JSON.stringify(userData));
-    this.step = 1;
-    return data;
+            let storedUsers = JSON.parse(localStorage.getItem("userPins")) || [];
+
+// Add new user data to the array
+storedUsers.push(userData);
+
+// Save updated array back to localStorage
+localStorage.setItem("userPins", JSON.stringify(storedUsers));    
+    this.step = 1;    
+    this.pin='',
+    this.lastName='',
+    this.phoneNumber='',
+    this.faceData=''
   } catch (error) {
     console.error("Error issuing credential:", error);
     throw error;
   }     
         },
         async verifyPin() {
-    const storedPin = localStorage.getItem('userPin');
-    if (!storedPin) {
+    const storedUsers = JSON.parse(localStorage.getItem('userPins')) || [];
+
+    if (storedUsers.length === 0) {
         alert("No PIN found, please set a PIN first.");
         return;
     }
-    const parsedData = JSON.parse(storedPin);
-    const url = config.subdomain + `/api/v1/credential/${parsedData.vcID}?retrieveCredential=true`;
-    if (this.enteredPin === parsedData.pin) {
-        console.log(parsedData);
-        try {
-            const response = await fetch(url,{
+
+    // Find the user with the entered PIN
+    const matchedUser = storedUsers.find(user => user.pin === this.enteredPin);
+
+    if (!matchedUser) {
+        alert("Incorrect PIN");
+        return;
+    }
+
+    console.log("User verified:", matchedUser);
+
+    const url = `${config.subdomain}/api/v1/credential/${matchedUser.vcID}?retrieveCredential=true`;
+
+    try {
+        const response = await fetch(url, {
             method: "GET",
             headers: {
-            "Content-Type": "application/json",
-            Authorization: "Bearer " + config.authToken,
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${config.authToken}`,
             },
-            })
-            const data = await response.json()
-            console.log(data)
-            this.jsonData = {
-                    name: data.credentialDocument.credentialSubject.lastName,
-                    nationalID: "2823921212",
-                    birthDate: "1990-01-01",
-                    phoneNumber: data.credentialDocument.credentialSubject.phoneNumber,
-                    address: "123 Street, City LA"                  
-                };
-                this.step = 5; // Move to selective disclosure UI
-            if (!response.ok) {
+        });
+
+        if (!response.ok) {
             const errorData = await response.json();
             throw new Error(`Error: ${errorData.message || response.statusText}`);
-            }
+        }
 
-        } catch (error) {
-            console.error("Error fetching credential:", error);
-            throw error;
-        }
-    } else {
-        alert("Incorrect PIN");
+        const data = await response.json();
+        console.log("Fetched credential:", data);
+
+        // Store fetched data in UI
+        this.jsonData = {
+            name: data.credentialDocument.credentialSubject.lastName,
+            nationalID: "2823921212",
+            birthDate: "1990-01-01",
+            phoneNumber: data.credentialDocument.credentialSubject.phoneNumber,
+            address: "123 Street, City LA"
+        };
+
+        this.step = 5; // Move to selective disclosure UI
+
+    } catch (error) {
+        console.error("Error fetching credential:", error);
+        alert("Failed to fetch credential. Please try again.");
     }
-    
 },
-shareSelectedData() {
-            this.sharedData = {};
-            this.selectedAttributes.forEach(attr => {
-                this.sharedData[attr] = this.jsonData[attr];
-            });
-            this.dialog = true; // Open popup
-        }
-    }
+shareSelected() {
+      if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+                const sharedData = {};
+                this.selectedAttributes.forEach(attr => {
+                    sharedData[attr] = this.jsonData[attr];
+                });
+                console.log(JSON.parse(this.qrData))                
+                this.ws.send(JSON.stringify({type:"shareData",payload:sharedData, clientId:JSON.parse(this.qrData).clientId}));
+                console.log("Shared data via WebSocket:", sharedData);              
+                this.step = 1
+
+
+            } else {
+                console.error("WebSocket is not connected.");
+            }
+    }}
 };
 </script>
 
