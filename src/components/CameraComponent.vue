@@ -1,4 +1,11 @@
 <template>
+    <v-snackbar v-model="notification.show" :color="notification.color" timeout="3000" top
+    absolute>
+    {{ notification.message }}
+    <template v-slot:action="{ attrs }">
+        <v-btn text v-bind="attrs" @click="notification.show = false">Close</v-btn>
+    </template>
+</v-snackbar>
     <v-container class="d-flex justify-center" style="width: 100%; height: 100%;">
         <global-loader :isLoading="isLoading" />
 
@@ -23,8 +30,8 @@
 
             <v-card-text v-if="step === 2">
                 <v-form ref="userForm">
-                    <v-text-field v-model="lastName" label="Last Name" required></v-text-field>
-                    <v-text-field v-model="phoneNumber" label="Phone Number" required></v-text-field>
+                    <v-text-field placeholder="Doe" v-model="lastName" label="Last Name" required></v-text-field>
+                    <v-text-field placeholder="+1 (555) 123-4567" v-model="phoneNumber" label="Phone Number" required></v-text-field>
                     <v-btn color="primary" @click="goToPinSetup">Next</v-btn>
                 </v-form>
             </v-card-text>
@@ -82,7 +89,12 @@ export default {
             selectedAttributes: [], // Stores selected attributes
             dialog: false, // Controls dialog visibility
             sharedData: {}, // Holds selected data to display  
-            ws: null                       
+            ws: null,
+            notification: {
+            show: false,
+            message: '',
+            color: 'success' // 'error' for errors
+        }                       
         };
     },
     mounted() {
@@ -127,6 +139,11 @@ export default {
         this.isLoading = false;
     }
 },
+showNotification(message, color = 'success') {
+        this.notification.message = message;
+        this.notification.color = color;
+        this.notification.show = true;
+    },
         async scanQRCode() {
     this.isScanning = true;
     this.isLoading = true;
@@ -243,6 +260,7 @@ localStorage.setItem("userPins", JSON.stringify(storedUsers));
     this.lastName='',
     this.phoneNumber='',
     this.faceData=''
+    this.showNotification("User Registration Completed", "success");
   } catch (error) {
     console.error("Error issuing credential:", error);
     throw error;
@@ -309,7 +327,8 @@ shareSelected() {
                 });
                 console.log(JSON.parse(this.qrData))                
                 this.ws.send(JSON.stringify({type:"shareData",payload:sharedData, clientId:JSON.parse(this.qrData).clientId}));
-                console.log("Shared data via WebSocket:", sharedData);              
+                console.log("Shared data via WebSocket:", sharedData);   
+                this.showNotification("Data has been shared successfully!", "success");           
                 this.step = 1
 
 
