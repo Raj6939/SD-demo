@@ -5,5 +5,7 @@ export default {
     vcID:"",
     subDid:'did:hid:testnet:d55ad7a7-c88d-4f2c-b7a5-6da460371229',
     subdomain:'https://ent-8e13fc8.api.entity.hypersign.id',
-    websocketUrl:'wss://rajpatil-production.up.railway.app'
+  websocketUrl: 'wss://wsserver-production-9341.up.railway.app'
+  // websocketUrl: "ws://localhost:5001"
+
 }
